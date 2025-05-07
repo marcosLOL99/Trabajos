@@ -6,7 +6,7 @@
         <div class="row">
           <div class="col-md-4 mb-3">
             <div class="d-flex align-items-center">
-              <label for="nombre" class="form-label fw-bold mb-0">Nombre:</label>
+              <span class="text-danger">*</span><label for="nombre" class="form-label fw-bold mb-0">Nombre:</label>
               <input type="text" class="form-control ms-2" id="nombre" required 
                     @blur="nuevaCita.nombre = capitalizar(nuevaCita.nombre)" v-model="nuevaCita.nombre" placeholder="Nombre del cliente" />
             </div>
@@ -28,7 +28,7 @@
           </div>
           <div class="col-md-4 mb-4">
             <div class="d-flex align-items-center">
-              <label for="fecha" class="form-label fw-bold mb-0">Hora:</label>
+              <span class="text-danger">*</span><label for="fecha" class="form-label fw-bold mb-0">Hora:</label>
               <select v-model="nuevaCita.hora" class="form-select ms-2" required>
                 <option disabled value="">Seleccione una hora</option>
                 <option v-for="hora in horasDisponibles" :key="hora" :value="hora">{{ hora }}</option>
@@ -37,7 +37,7 @@
           </div>
         </div>
         <div class="row justify-content-center">
-          <label class="form-label fw-bold mb-2">Fecha:</label>
+          <label class="form-label fw-bold mb-2"><span class="text-danger">*</span>Fecha:</label>
           <div class="col-md-8 mb-4 text-center">
             <VueCal
               class="calendario"
@@ -219,6 +219,7 @@ export default {
         this.nuevaCita = { ...citaguardada };
         this.cargarCitas();
         this.limpiarCita();
+        this.restablecerFiltro();
 
       } catch (error) {
         console.error('Error al guardar la cita:', error);
@@ -353,8 +354,9 @@ export default {
 </script>
 <style scoped>
 .calendario {
-  height: 300px;
+  max-width: 100%;
   width: 700px;
+  margin: 0 auto;
   background: linear-gradient(to top, #ffdde1, #ffffff);
   border-radius: 10px;
   padding: 10px;
