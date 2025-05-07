@@ -29,7 +29,10 @@
           <div class="col-md-4 mb-4">
             <div class="d-flex align-items-center">
               <label for="fecha" class="form-label fw-bold mb-0">Hora:</label>
-              <input v-model="nuevaCita.hora" type="time" class="form-control ms-2"  required />
+              <select v-model="nuevaCita.hora" class="form-select ms-2" required>
+                <option disabled value="">Seleccione una hora</option>
+                <option v-for="hora in horasDisponibles" :key="hora" :value="hora">{{ hora }}</option>
+              </select>
             </div>
           </div>
         </div>
@@ -41,6 +44,7 @@
               hide-title
               :disable-views="['years', 'year', 'week', 'day']"
               default-view="month"
+              :disable-date="deshabilitarFecha"
               style="height: 300px; width: 700px;"
               @cell-click="seleccionarFecha"
             />
@@ -48,6 +52,7 @@
           </div>
         </div>
         <div class="d-flex justify-content-center">
+          <button type="button" class="btn btn-sm me-2" style="background-color: #5bc0de; color: white;" @click="restablecerFiltro"> Borrar filtro </button>
           <button type="submit" class="btn btn-sm" style="background-color: #5bc0de; color: white;"> Guardar </button>
         </div>
       </form>
@@ -68,7 +73,7 @@
           <td class="py-1">{{ cita.nombre }}</td>
           <td class="py-1 text-center">{{ cita.movil }}</td>
           <td class="py-1 text-center">{{ formatearFecha(cita.fecha) }}</td>
-          <td class="py-1 text-center">{{ cita.hora }}</td>
+          <td class="py-1 text-center">{{ formatearHora(cita.hora) }}</td>
           <td class="py-1 justify-content-center">
             <div class="d-flex justify-content-center">     
               <button class="btn btn-warning btn-sm me-1" style="background-color: red; color: white;" @click="eliminarCita(cita.id)">
@@ -100,7 +105,9 @@ export default {
         hora: "" 
       },
       citas: [],
+      horasDisponibles: [],
 
+      fechaFiltrada : "",
       movilError: false,
       loading: true,
       paginaActual: 1,  // Página inicial
@@ -113,17 +120,36 @@ export default {
       return Math.ceil(this.citas.length / this.citasPorPagina);
     },
     paginados() {
+      let citasFiltradas = this.citas;
+
+      if (this.fechaFiltrada) {
+        citasFiltradas = citasFiltradas.filter(cita => {
+          const citaFecha = new Date(cita.fecha);
+          const filtroFecha = new Date(this.fechaFiltrada);
+          return (
+            citaFecha.getFullYear() === filtroFecha.getFullYear() &&
+            citaFecha.getMonth() === filtroFecha.getMonth() &&
+            citaFecha.getDate() === filtroFecha.getDate()
+          );
+        });
+      }
+
       const start = (this.paginaActual - 1) * this.citasPorPagina;
       const end = start + this.citasPorPagina;
-      return this.citas.slice(start, end);
+      return citasFiltradas.slice(start, end);
     },
   },
 
   mounted() {
     this.cargarCitas();
+    this.generarHoras();
   },
 
   methods: {
+    limpiarCita() {
+      this.nuevaCita = { nombre: "", movil: "", fecha: "", hora: "" };
+    },
+
     async cargarCitas() {
       try {
         const response = await axios.get("http://localhost:3000/api/citas");
@@ -136,10 +162,23 @@ export default {
     },
 
     async agregarCita() {
+      
       try {
-        // Verificar si el móvil ya existe
         const { data: citas } = await axios.get('http://localhost:3000/api/citas');
         const citaExistente = citas.find(cita => cita.movil === this.nuevaCita.movil && cita.id !== this.nuevaCita.id);
+        const horaOcupada = citas.find(cita => 
+          this.formatearHora(cita.hora) === this.formatearHora(this.nuevaCita.hora) && 
+          this.formatearFecha(cita.fecha) === this.formatearFecha(this.nuevaCita.fecha)
+        );
+
+        if (horaOcupada) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Hora ya seleccionada',
+            text: 'La hora seleccionada ya está ocupada. Elige otra hora.',
+          });
+          return;  // No permitir guardar la cita
+        }
 
         if (citaExistente) {
           Swal.fire({
@@ -152,7 +191,6 @@ export default {
 
         let citaguardada;
 
-        // Si el usuario tiene id (actualización), utilizamos ese id, de lo contrario, no lo enviamos
         let citaAEnviar = { ...this.nuevaCita };
 
         if (this.nuevaCita.fecha.includes('/')) {
@@ -175,14 +213,15 @@ export default {
         Swal.fire({
           icon: 'success',
           title: 'Guardado',
-          text: 'Datos de la cuta actualizados correctamente.'
+          text: 'Datos de la cita actualizados correctamente.'
         });
 
         this.nuevaCita = { ...citaguardada };
         this.cargarCitas();
+        this.limpiarCita();
 
       } catch (error) {
-        console.error('Error al guardar usuario:', error);
+        console.error('Error al guardar la cita:', error);
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -191,7 +230,7 @@ export default {
       }
     },
 
-  async eliminarCita(id) {
+    async eliminarCita(id) {
       console.log("ID enviado al backend:", id);
 
       if (!id) return;
@@ -222,6 +261,29 @@ export default {
       }
     },
 
+    esHoraOcupada(hora) {
+      // Primero formateamos la fecha de la nueva cita para comparar en el mismo formato
+      const nuevaCitaFecha = new Date(this.nuevaCita.fecha);
+
+      // Comprobamos si existe alguna cita en el mismo día con la misma hora
+      return this.citas.some(cita => {
+        const citaFecha = new Date(cita.fecha);
+        // Comparamos tanto la fecha como la hora, y además aseguramos que la hora de la cita está bien formateada
+        return citaFecha.toDateString() === nuevaCitaFecha.toDateString() && cita.hora === hora;
+      });
+    },
+
+    generarHoras() {
+      const inicio = 8 * 60;
+      const fin = 14 * 60 + 30;
+      const intervalo = 30;
+
+      for (let i = inicio; i <= fin; i += intervalo) {
+        const horas = String(Math.floor(i / 60)).padStart(2, '0');
+        const minutos = String(i % 60).padStart(2, '0');
+        this.horasDisponibles.push(`${horas}:${minutos}`);
+      }
+    },
 
     capitalizar(texto) {
       return texto.replace(/\b\w/g, char => char.toUpperCase());
@@ -243,11 +305,18 @@ export default {
 
     seleccionarFecha(payload) {
       const fecha = new Date(payload.dateTime || payload.start || payload);
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      fecha.setHours(0, 0, 0, 0);
+      if (fecha < hoy) {
+        return; // No hacer nada si la fecha es anterior a hoy
+      }
       if (!isNaN(fecha.getTime())) {
         const dia = String(fecha.getDate()).padStart(2, '0');
         const mes = String(fecha.getMonth() + 1).padStart(2, '0');
         const año = fecha.getFullYear();
         this.nuevaCita.fecha = `${año}-${mes}-${dia}`;
+        this.fechaFiltrada = `${año}-${mes}-${dia}`;
       }
     },
 
@@ -259,7 +328,26 @@ export default {
       const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
       const año = fechaObj.getFullYear();
       return `${dia}/${mes}/${año}`;
-    }
+    },
+
+    formatearHora(hora) {
+      if (!hora) return '';
+      const [h, m] = hora.split(':');
+      const horaFormateada = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+      return horaFormateada;
+    },
+
+    restablecerFiltro() {
+      this.fechaFiltrada = "";
+    },
+
+    deshabilitarFecha(date) {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Elimina la hora para comparación exacta de fechas
+      const fechaSeleccionada = new Date(date);
+      fechaSeleccionada.setHours(0, 0, 0, 0);
+      return fechaSeleccionada < hoy;
+    },
   },
 };
 </script>

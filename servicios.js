@@ -443,7 +443,7 @@ const guardarZonaTratamiento = async (req, res) => {
 //citas: obtener citas 
 
 const obtenerCita = (req, res) => {
-  db.query('SELECT * FROM citas ORDER BY hora', (err, results) => {
+  db.query('SELECT * FROM citas ORDER BY fecha, hora DESC', (err, results) => {
     if (err) {
       console.error(err);
       res.status(500).send('Error al obtener citas');
