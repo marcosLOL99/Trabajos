@@ -11,7 +11,7 @@
                     @blur="nuevaCita.nombre = capitalizar(nuevaCita.nombre)" v-model="nuevaCita.nombre" placeholder="Nombre del cliente" />
             </div>
           </div>
-          <div class="col-md-3 mb-3">
+          <div class="col-md-6 mb-3">
             <div class="d-flex align-items-center">
               <span class="text-danger">*</span><label for="movil" class="form-label mb-0 fw-bold me-2">Móvil:</label>
               <div class="input-group">
@@ -22,11 +22,20 @@
                       @blur="validarMovil"
                       required  
                       placeholder="Introduzca móvil">
+                      <button 
+                        class="btn btn-outline-secondary" 
+                        type="button" 
+                        @click="buscarUsuarioPorMovil" 
+                        style="background-color: #5bc0de; color: white;" >
+                        <i class="bi bi-search"></i>  <!-- Icono de lupa -->
+                      </button>
                 </div>
               <small v-if="movilError" class="text-danger"></small> <!-- Mensaje de error -->
             </div>
           </div>
-          <div class="col-md-4 mb-4">
+        </div>
+        <div class="row">
+          <div class="col-md-5 mb-4">
             <div class="d-flex align-items-center">
               <span class="text-danger">*</span><label for="fecha" class="form-label fw-bold mb-0">Hora:</label>
               <select v-model="nuevaCita.hora" class="form-select ms-2" required>
@@ -35,21 +44,28 @@
               </select>
             </div>
           </div>
+          <div class="col-md-5 mb-4">
+            <div class="d-flex align-items-center">
+              <label for="tecnica" class="form-label fw-bold">Técnica:</label>
+              <input type="text" id="tecnica" class="form-control ms-2"  v-model="nuevaCita.tecnica" placeholder="Escribe una técnica"/>
+            </div>
+          </div>
         </div>
         <div class="row justify-content-center">
-          <label class="form-label fw-bold mb-2"><span class="text-danger">*</span>Fecha:</label>
           <div class="col-md-8 mb-4 text-center">
             <VueCal
-              class="calendario"
-              hide-title
+              title="Selecciona una fecha"
+              locale="es"
               :disable-views="['years', 'year', 'week', 'day']"
               default-view="month"
+              :min-date="minDate()"
               :disable-date="deshabilitarFecha"
+              hide-weekends
               style="height: 300px; width: 700px;"
-              @cell-click="seleccionarFecha"
-            />
+              @cell-click="seleccionarFecha">
+            </VueCal>
           <small v-if="nuevaCita.fecha" class="text-muted">Seleccionada: {{ formatearFecha(nuevaCita.fecha) }}</small>
-          </div>
+         </div>
         </div>
         <div class="d-flex justify-content-center">
           <button type="button" class="btn btn-sm me-2" style="background-color: #5bc0de; color: white;" @click="restablecerFiltro"> Borrar filtro </button>
@@ -66,6 +82,7 @@
           <th>Teléfono</th>
           <th>Fecha</th>
           <th>Hora</th>
+          <th>Técnica</th>
         </tr>
       </thead>
       <tbody class="table-hover">
@@ -74,6 +91,7 @@
           <td class="py-1 text-center">{{ cita.movil }}</td>
           <td class="py-1 text-center">{{ formatearFecha(cita.fecha) }}</td>
           <td class="py-1 text-center">{{ formatearHora(cita.hora) }}</td>
+          <td class="py-1 text-center">{{ cita.tecnica }}</td>
           <td class="py-1 justify-content-center">
             <div class="d-flex justify-content-center">     
               <button class="btn btn-warning btn-sm me-1" style="background-color: red; color: white;" @click="eliminarCita(cita.id)">
@@ -84,6 +102,15 @@
         </tr>
       </tbody>
     </table>
+    <div class="d-flex justify-content-center mt-2">
+      <button class="btn btn-sm" :disabled="paginaActual === 1" @click="cambiarPagina(paginaActual - 1)" style="background-color: #f8c6d2; border-color: #f8c6d2;">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <span class="mx-2" style="font-size: 0.75rem; color: #555; display: flex; align-items: center;">{{ paginaActual }} / {{ totalPaginas }}</span>
+      <button class="btn btn-sm" :disabled="paginaActual === totalPaginas" @click="cambiarPagina(paginaActual + 1)" style="background-color: #f8c6d2; border-color: #f8c6d2;">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -102,7 +129,8 @@ export default {
         nombre: "", 
         movil: "", 
         fecha: "", 
-        hora: "" 
+        hora: "",
+        tecnica: ""
       },
       citas: [],
       horasDisponibles: [],
@@ -139,6 +167,7 @@ export default {
       return citasFiltradas.slice(start, end);
     },
   },
+  
 
   mounted() {
     this.cargarCitas();
@@ -146,8 +175,20 @@ export default {
   },
 
   methods: {
+    minDate() {
+      const hoy = new Date();
+      return hoy;
+    },
+
+
     limpiarCita() {
-      this.nuevaCita = { nombre: "", movil: "", fecha: "", hora: "" };
+      this.nuevaCita = { nombre: "", movil: "", fecha: "", hora: "", tecnica: "" };
+    },
+
+    cambiarPagina(pagina) {
+      if (pagina >= 1 && pagina <= this.totalPaginas) {
+        this.paginaActual = pagina;
+      }
     },
 
     async cargarCitas() {
@@ -262,6 +303,44 @@ export default {
       }
     },
 
+    async buscarUsuarioPorMovil() {
+      if (!this.nuevaCita.movil) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Número requerido',
+          text: 'Por favor, introduzca un número de móvil para buscar.',
+        });
+        return;
+      }
+
+      try {
+        const response = await axios.get(`http://localhost:3000/api/usuarios/${this.nuevaCita.movil}`);
+        const usuario = response.data;
+
+        if (usuario && usuario.nombre) {
+          this.nuevaCita.nombre = usuario.nombre;
+          Swal.fire({
+            icon: 'success',
+            title: 'Usuario encontrado',
+            text: `Nombre: ${usuario.nombre}`,
+          });
+        } else {
+          Swal.fire({
+            icon: 'info',
+            title: 'No encontrado',
+            text: 'No se encontró ningún usuario con ese número.',
+          });
+        }
+      } catch (error) {
+        console.error('Error al buscar el usuario:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo buscar el usuario.',
+        });
+      }
+    },
+
     esHoraOcupada(hora) {
       // Primero formateamos la fecha de la nueva cita para comparar en el mismo formato
       const nuevaCitaFecha = new Date(this.nuevaCita.fecha);
@@ -310,7 +389,7 @@ export default {
       hoy.setHours(0, 0, 0, 0);
       fecha.setHours(0, 0, 0, 0);
       if (fecha < hoy) {
-        return; // No hacer nada si la fecha es anterior a hoy
+        return;
       }
       if (!isNaN(fecha.getTime())) {
         const dia = String(fecha.getDate()).padStart(2, '0');
@@ -344,7 +423,7 @@ export default {
 
     deshabilitarFecha(date) {
       const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0); // Elimina la hora para comparación exacta de fechas
+      hoy.setHours(0, 0, 0, 0);
       const fechaSeleccionada = new Date(date);
       fechaSeleccionada.setHours(0, 0, 0, 0);
       return fechaSeleccionada < hoy;
@@ -353,7 +432,7 @@ export default {
 };
 </script>
 <style scoped>
-.calendario {
+.vuecal {
   max-width: 100%;
   width: 700px;
   margin: 0 auto;

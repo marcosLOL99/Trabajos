@@ -456,11 +456,11 @@ const obtenerCita = (req, res) => {
 //citas: guardar cita
 
 const guardarCita = (req, res) => {
-  const { nombre, movil, fecha, hora } = req.body;
+  const { nombre, movil, fecha, hora, tecnica } = req.body;
 
-  const query = 'INSERT INTO citas (nombre, movil, fecha, hora) VALUES (?, ?, ?, ?)';
+  const query = 'INSERT INTO citas (nombre, movil, fecha, hora, tecnica) VALUES (?, ?, ?, ?, ?)';
 
-  db.query(query, [nombre, movil, fecha, hora], (err, results) => {
+  db.query(query, [nombre, movil, fecha, hora, tecnica], (err, results) => {
     if (err) {
       console.error("Error en la consulta SQL:", err.sqlMessage);
       res.status(500).send("Error al guardar la cita");
@@ -473,7 +473,8 @@ const guardarCita = (req, res) => {
       nombre,
       movil,
       fecha,
-      hora
+      hora,
+      tecnica
     };
 
     // Devolvemos el nuevo usuario con el id incluido
@@ -488,7 +489,7 @@ const actualizarCita = (req, res) => {
 
   const query = `
     UPDATE citas 
-    SET nombre = ?, movil = ?, fecha = ?, hora = ?
+    SET nombre = ?, movil = ?, fecha = ?, hora = ?, tecnica = ?
     WHERE id = ?
   `;
 
