@@ -27,10 +27,10 @@
                         type="button" 
                         @click="buscarUsuarioPorMovil" 
                         style="background-color: #5bc0de; color: white;" >
-                        <i class="bi bi-search"></i>  <!-- Icono de lupa -->
+                        <i class="bi bi-search"></i>
                       </button>
                 </div>
-              <small v-if="movilError" class="text-danger"></small> <!-- Mensaje de error -->
+              <small v-if="movilError" class="text-danger"></small>
             </div>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default {
             title: 'Hora ya seleccionada',
             text: 'La hora seleccionada ya está ocupada. Elige otra hora.',
           });
-          return;  // No permitir guardar la cita
+          return;
         }
 
         if (citaExistente) {
@@ -342,13 +342,10 @@ export default {
     },
 
     esHoraOcupada(hora) {
-      // Primero formateamos la fecha de la nueva cita para comparar en el mismo formato
       const nuevaCitaFecha = new Date(this.nuevaCita.fecha);
 
-      // Comprobamos si existe alguna cita en el mismo día con la misma hora
       return this.citas.some(cita => {
         const citaFecha = new Date(cita.fecha);
-        // Comparamos tanto la fecha como la hora, y además aseguramos que la hora de la cita está bien formateada
         return citaFecha.toDateString() === nuevaCitaFecha.toDateString() && cita.hora === hora;
       });
     },

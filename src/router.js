@@ -8,7 +8,7 @@ import DatosEsteticos from './components/DatosEsteticos.vue';
 import DatosPiel from './components/DatosPiel.vue';
 import ContraIndicaciones from './components/ContraIndicaciones.vue';
 import TrataMientos from './components/TrataMientos.vue';
-import ComponenteCitas from './components/CitasEstetica.vue';
+import CitasEstetica from './components/CitasEstetica.vue';
 
 // Definir las rutas
 
@@ -22,7 +22,7 @@ const routes = [
   { path: '/contra-indicaciones', component: ContraIndicaciones},
   { path: '/tratamientos', component: TrataMientos },
   { path: '/acerca', component: AcercaDe},
-  { path: '/citas', component: ComponenteCitas},
+  { path: '/citas', component: CitasEstetica},
   // Otras rutas
 ];
 
